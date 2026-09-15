@@ -991,12 +991,6 @@ app.post(
         }
       );
 
-      console.log(
-        "PASSWORD RESET OTP:",
-        email,
-        code
-      );
-
       res.json({
         success: true,
         message:
