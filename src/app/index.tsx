@@ -1,6 +1,9 @@
+// ชุดไอคอนที่ใช้แสดงสัญลักษณ์ต่าง ๆ ในหน้าร้านค้า
 import { Ionicons } from "@expo/vector-icons";
+// ตัวช่วยเปลี่ยนหน้าใน Expo Router
 import { router } from "expo-router";
-import { useEffect, useMemo, useState, useRef } from "react";
+// React hooks ที่ใช้จัดการ state, lifecycle, ค่าที่คำนวณ และ reference ของ ScrollView
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,13 +19,18 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+// ดึงข้อมูลผู้ใช้และ token จากระบบ authentication กลางของแอป
 import { useAuth } from "@/context-auth";
 
+// URL สำหรับเรียกข้อมูลสินค้าจาก backend
 const API = "http://119.59.102.161:3081/api/products";
+// URL สำหรับเพิ่มสินค้าเข้าไปในตะกร้าของผู้ใช้
 const API_CART = "http://119.59.102.161:3081/api/cart";
 
+// กลุ่มระดับราคาที่ระบบ K-Means จะกำหนดให้สินค้า
 type PriceTier = "Low" | "Mid" | "High";
 
+// โครงสร้างข้อมูลสินค้าที่ได้รับจาก backend
 type Product = {
   id: number;
   product_name: string;
@@ -52,16 +60,19 @@ type Product = {
    K-MEANS PRICE CLUSTERING
 ========================================================= */
 
+// แบ่งสินค้าออกเป็นกลุ่มราคาถูก, กลาง และแพงด้วย K-Means แบบทำงานภายในเครื่อง
 const clusterPricesLocally = (data: Product[]): Product[] => {
+  // ไม่มีข้อมูลให้จัดกลุ่ม จึงคืนค่าเป็น array ว่าง
   if (!data || data.length === 0) return [];
 
+  // ใช้ราคาลดเมื่อมี ถ้าไม่มีจึงใช้ราคาปกติ
   const prices = data.map((item) =>
     item.discount_price != null
       ? Number(item.discount_price)
       : Number(item.price)
   );
 
-  // ถ้ามีสินค้าไม่ถึง 3 ตัว
+  // ถ้ามีสินค้าไม่ถึง 3 ตัว จะจัดกลุ่มแบบพิเศษแทน K-Means ปกติ
   if (prices.length === 1) {
     return data.map((item) => ({
       ...item,
@@ -81,6 +92,7 @@ const clusterPricesLocally = (data: Product[]): Product[] => {
     }));
   }
 
+  // กำหนดค่าจุดศูนย์กลางเริ่มต้นเป็นราคาต่ำสุด, กลาง และสูงสุด
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
 
@@ -94,15 +106,18 @@ const clusterPricesLocally = (data: Product[]): Product[] => {
   let changed = true;
   let iterations = 0;
 
+  // ทำซ้ำจนกว่าจุดศูนย์กลางจะไม่เปลี่ยน หรือครบจำนวนรอบสูงสุด
   while (changed && iterations < 100) {
     changed = false;
     iterations++;
 
+    // ให้สินค้าแต่ละชิ้นอยู่ในกลุ่มที่มีจุดศูนย์กลางใกล้ราคาที่สุด
     assignments = prices.map((price) => {
       const diffs = centroids.map((c) => Math.abs(price - c));
       return diffs.indexOf(Math.min(...diffs));
     });
 
+    // คำนวณจุดศูนย์กลางใหม่จากค่าเฉลี่ยราคาของสินค้าในแต่ละกลุ่ม
     const newCentroids = [0, 1, 2].map((i) => {
       const clusterPrices = prices.filter(
         (_, index) => assignments[index] === i
@@ -118,6 +133,7 @@ const clusterPricesLocally = (data: Product[]): Product[] => {
       );
     });
 
+    // ถ้าจุดศูนย์กลางเปลี่ยนมากกว่า 0.01 ให้ทำรอบถัดไป
     if (
       newCentroids.some(
         (value, index) => Math.abs(value - centroids[index]) > 0.01
@@ -153,11 +169,13 @@ const clusterPricesLocally = (data: Product[]): Product[] => {
   });
 };
 
+// แปลงตัวเลขเป็นรูปแบบราคาเงินบาทตาม locale ภาษาไทย
 const money = (n: number) =>
   `฿${Number(n || 0).toLocaleString("th-TH", {
     minimumFractionDigits: 0,
   })}`;
 
+// แสดงข้อความแจ้งเตือนให้เหมาะกับ platform ที่กำลังใช้งาน
 const notify = (title: string, msg: string) =>
   Platform.OS === "web"
     ? window.alert(`${title}\n\n${msg}`)
@@ -168,23 +186,28 @@ const notify = (title: string, msg: string) =>
 ========================================================= */
 
 export default function StoreHome() {
+  // ใช้ขนาดหน้าจอเพื่อสลับ layout ระหว่าง desktop และ mobile
   const { width } = useWindowDimensions();
   const mobile = width < 700;
 
+  // ข้อมูล session ปัจจุบันและฟังก์ชันออกจากระบบ
   const { token, user, logout } = useAuth();
 
+  // reference สำหรับสั่งเลื่อนหน้าร้านค้ากลับไปด้านบน
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // state หลักของสินค้าและค่าที่ผู้ใช้เลือกในตัวกรอง
   const [products, setProducts] = useState<Product[]>([]);
   const [q, setQ] = useState("");
   const [brand, setBrand] = useState("");
   const [size, setSize] = useState("");
 
-  // ⭐ ตัวกรอง Low / Mid / High
+  // ระดับราคาที่เลือก โดยค่าเริ่มต้นคือแสดงสินค้าทุกระดับ
   const [selectedTier, setSelectedTier] = useState<
     "All" | PriceTier
   >("All");
 
+  // สถานะระหว่างโหลดข้อมูลและเพิ่มสินค้าลงตะกร้า
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<Product[]>([]);
   const [addingId, setAddingId] = useState<number | null>(null);
@@ -193,10 +216,12 @@ export default function StoreHome() {
      LOAD PRODUCTS
   ========================================================= */
 
+  // โหลดสินค้าจาก backend โดยรองรับคำค้นหา
   const load = async (search = "") => {
     setLoading(true);
 
     try {
+      // ส่ง token ไปด้วยเมื่อผู้ใช้ล็อกอินแล้ว
       const r = await fetch(
         `${API}?q=${encodeURIComponent(search)}`,
         {
@@ -208,6 +233,7 @@ export default function StoreHome() {
         }
       );
 
+      // แปลง response เป็น JSON ก่อนตรวจสอบผลลัพธ์
       const d = await r.json();
 
       if (!r.ok) {
@@ -216,6 +242,7 @@ export default function StoreHome() {
         );
       }
 
+      // ป้องกันข้อมูลผิดรูปแบบไม่ให้หลุดเข้า state
       setProducts(Array.isArray(d) ? d : []);
     } catch (e) {
       console.error(e);
@@ -231,6 +258,7 @@ export default function StoreHome() {
     }
   };
 
+  // โหลดสินค้าใหม่เมื่อ token เปลี่ยน เช่น หลัง login หรือ logout
   useEffect(() => {
     load("");
   }, [token]);
@@ -239,6 +267,7 @@ export default function StoreHome() {
      FILTER DATA
   ========================================================= */
 
+  // สร้างรายการแบรนด์ที่ไม่ซ้ำกันสำหรับปุ่มตัวกรอง
   const brands = useMemo(
     () =>
       Array.from(
@@ -251,6 +280,7 @@ export default function StoreHome() {
     [products]
   );
 
+  // สร้างรายการขนาดกระเป๋าที่ไม่ซ้ำกันและเรียงจากเล็กไปใหญ่
   const sizes = useMemo(
     () =>
       Array.from(
@@ -263,6 +293,7 @@ export default function StoreHome() {
     [products]
   );
 
+  // กรองสินค้าตามแบรนด์และขนาดที่ผู้ใช้เลือก
   const filtered = useMemo(() => {
     return products.filter(
       (p) =>
@@ -272,13 +303,13 @@ export default function StoreHome() {
     );
   }, [products, brand, size]);
 
-  // ⭐ คำนวณ Low / Mid / High
+  // คำนวณระดับราคาให้กับสินค้าที่ผ่านตัวกรองพื้นฐานแล้ว
   const clusteredFiltered = useMemo(
     () => clusterPricesLocally(filtered),
     [filtered]
   );
 
-  // ⭐ กรองตาม Low / Mid / High
+  // กรองซ้ำตามระดับราคาที่ผู้ใช้เลือก
   const finalProducts = useMemo(() => {
     if (selectedTier === "All") {
       return clusteredFiltered;
@@ -293,6 +324,7 @@ export default function StoreHome() {
      ADD CART
   ========================================================= */
 
+  // เพิ่มสินค้าที่เลือกลงตะกร้าผ่าน API
   const addCart = async (p: Product) => {
     if (!user?.id) {
       notify(
@@ -304,9 +336,11 @@ export default function StoreHome() {
       return;
     }
 
+    // ล็อกปุ่มของสินค้าชิ้นนี้ระหว่างรอ server ตอบกลับ
     setAddingId(p.id);
 
     try {
+      // ส่งข้อมูลผู้ใช้ สินค้า จำนวน และตัวเลือกสินค้าไปยัง backend
       const response = await fetch(API_CART, {
         method: "POST",
 
@@ -335,6 +369,7 @@ export default function StoreHome() {
         (resData.status === "success" ||
           resData.success)
       ) {
+        // เพิ่มลง state เพื่ออัปเดตตัวเลข badge บนไอคอนตะกร้า
         setCart((c) =>
           c.some((x) => x.id === p.id)
             ? c
@@ -367,6 +402,7 @@ export default function StoreHome() {
     }
   };
 
+  // เลือกราคาที่ต้องแสดง โดยให้ราคาลดมี priority เหนือราคาปกติ
   const activePrice = (p: Product) =>
     p.discount_price != null
       ? p.discount_price
@@ -376,6 +412,7 @@ export default function StoreHome() {
      SCROLL
   ========================================================= */
 
+  // ล้างตัวกรองและเลื่อนกลับไปยังรายการสินค้า
   const scrollToProducts = () => {
     setBrand("");
     setSize("");
@@ -391,6 +428,7 @@ export default function StoreHome() {
      TIER COLOR
   ========================================================= */
 
+  // เลือกสี badge ตามระดับราคาของสินค้า
   const getTierColor = (tier: string) => {
     switch (tier) {
       case "Low":
@@ -411,6 +449,7 @@ export default function StoreHome() {
      UI
   ========================================================= */
 
+  // ส่วนแสดงผลหลักของหน้าร้านค้า
   return (
     <SafeAreaView style={styles.page}>
       <StatusBar
