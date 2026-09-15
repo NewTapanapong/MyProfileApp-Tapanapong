@@ -1,3 +1,4 @@
+import { useAuth } from "@/context-auth";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -14,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAuth } from "@/context-auth";
 
 const notify = (t: string, m: string) =>
   Platform.OS === "web"
@@ -29,29 +29,29 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (!username.trim() || !password) {
-      notify("ข้อมูลไม่ครบ", "กรุณากรอก Username และ Password");
-      return;
-    }
+  if (!username.trim() || !password) {
+    notify("ข้อมูลไม่ครบ", "กรุณากรอก Username และ Password");
+    return;
+  }
 
-    setLoading(true);
-    try {
-      await login(username.trim(), password);
-      if (router.canDismiss()) {
-        router.dismissAll();
-      }
-      
-      // ล็อกอินสำเร็จให้ส่งไปที่หน้า Home
-      router.replace("/home"); 
-    } catch (e) {
-      notify(
-        "เข้าสู่ระบบไม่สำเร็จ",
-        e instanceof Error ? e.message : "เกิดข้อผิดพลาด"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+
+  try {
+    // ตรวจสอบ Login
+    await login(username.trim(), password);
+
+    // Login สำเร็จ → ไปหน้า Home
+    router.replace("/home");
+
+  } catch (e) {
+    notify(
+      "เข้าสู่ระบบไม่สำเร็จ",
+      e instanceof Error ? e.message : "Username หรือ Password ไม่ถูกต้อง"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>

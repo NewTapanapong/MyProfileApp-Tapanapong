@@ -239,7 +239,7 @@ function InitialLayoutNav() {
     }
 
     if (token && isAuthPage) {
-      router.replace("/");
+      router.replace("/home");
     }
   }, [token, isAuthPage]);
 
