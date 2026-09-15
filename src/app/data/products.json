@@ -1,0 +1,23 @@
+[
+  {
+    "id": "1",
+    "name": "iphone 17 promax 1 TB",
+    "brand": "Apple",
+    "price": 64900,
+    "image": "https://res.cloudinary.com/s7iv7oxn/image/upload/v1784895932/Apple-iPhone-17-Pro-Max-PNG_z3sevs.png"
+  },
+  {
+    "id": "2",
+    "name": "samsung s26 ultra 256 GB",
+    "brand": "samsung",
+    "price": 30900,
+    "image": "https://res.cloudinary.com/s7iv7oxn/image/upload/v1784895932/Samsung-S26-Ultra-png_fwctuz.png"
+  },
+  {
+    "id": "3",
+    "name": "iphone xr 256 GB",
+    "brand": "Apple",
+    "price": 29900,
+    "image": "https://res.cloudinary.com/s7iv7oxn/image/upload/v1784895933/iPhone-Xr-PNG-HD-Image_c4s98y.png"
+  }
+]
