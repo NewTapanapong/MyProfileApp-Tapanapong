@@ -1000,7 +1000,9 @@ app.post(
       res.json({
         success: true,
         message:
-          "สร้าง OTP แล้ว ดูได้จาก Console ของ Server",
+          "สร้าง OTP สำเร็จ",
+        // ส่ง OTP กลับสำหรับการทดสอบ เพื่อให้หน้าแอปแสดงค่าแทนการดูจาก PuTTY
+        otp: code,
       });
     } catch (e) {
       console.error(

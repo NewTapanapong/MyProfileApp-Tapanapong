@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -14,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
 // API endpoints
 const API_FORGOT_PASSWORD_URL =
@@ -95,9 +95,16 @@ export default function ForgotPasswordScreen() {
         throw new Error(data.message || "ไม่สามารถส่งรหัสยืนยันได้");
       }
 
+      // รับ OTP จาก backend แล้วใส่ลงช่องกรอกให้อัตโนมัติ
+      if (data.otp) {
+        setOtpCode(String(data.otp));
+      }
+
       notify(
         "ส่งรหัสยืนยันแล้ว",
-        "กรุณาตรวจสอบอีเมลของคุณเพื่อรับรหัส OTP สำหรับตั้งรหัสผ่านใหม่"
+        data.otp
+          ? `รหัส OTP ของคุณคือ ${data.otp}`
+          : "กรุณาตรวจสอบอีเมลของคุณเพื่อรับรหัส OTP สำหรับตั้งรหัสผ่านใหม่"
       );
       setStep("reset");
     } catch (error) {
